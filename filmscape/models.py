@@ -24,7 +24,7 @@ class Video(models.Model):
     # responseFilter is always null, skipped
     # clearKeys is always empty object, skipped
     # extraConfig is always null, skipped
-    adTagUri = models.TextField(max_length=2048, null=True) # @todo change to URL field but it breaks of one URI (dunno why)
+    adTagUri = models.URLField(max_length=2048, null=True)
     imaVideoId = models.SlugField(null=True)
     # imaAssetKey is always null, skipped
     imaContentSrcId = models.PositiveIntegerField(null=True)

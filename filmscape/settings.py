@@ -126,3 +126,17 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FILMSCAPE_API_URL = os.getenv('FILMSCAPE_API_URL', '')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('FILMSCAPE_LOGGING_LEVEL', 'WARNING'),
+    },
+}
