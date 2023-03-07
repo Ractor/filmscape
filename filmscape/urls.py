@@ -20,5 +20,6 @@ from filmscape import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    path('update-film-list/', views.UpdateFilmList.as_view()),
+    path('update-film-list/', views.UpdateFilmListView.as_view()),
+    path('video/', views.VideosView.as_view()),
 ]

@@ -1,19 +1,22 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from requests import JSONDecodeError
+from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.filters import SearchFilter
 from rest_framework import status
 from requests.exceptions import ConnectionError
 import requests
 import logging
 
-from filmscape.serializers import VideoSerializer
+from filmscape.serializers import VideoImportSerializer, VideoSerializer
 from filmscape.models import Video
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
-class UpdateFilmList(APIView):
+class UpdateFilmListView(APIView):
     """
     Fetches information from the video provider and saves them locally.
     """
@@ -26,7 +29,7 @@ class UpdateFilmList(APIView):
             r = requests.get(settings.FILMSCAPE_API_URL)
             data = r.json()
             logger.debug('Serializing fetched data.')
-            serializer = VideoSerializer(data=data, many=True)
+            serializer = VideoImportSerializer(data=data, many=True)
 
             # If there is any invalid record, parse records separately
             # and use a different HTTP status code to address this.
@@ -60,3 +63,11 @@ class UpdateFilmList(APIView):
             video.delete()
 
         return Response(status=status_code)
+
+
+class VideosView(ListAPIView):
+    queryset = Video.objects.all()
+    serializer_class = VideoSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['disabled', 'isFeatured']
+    search_fields = ['name', 'shortName']
