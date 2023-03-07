@@ -3,12 +3,13 @@ from requests import JSONDecodeError
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import status
 from requests.exceptions import ConnectionError
 import requests
 import logging
 
+from filmscape.filters import CaseInsensitiveOrderingFilter
 from filmscape.serializers import VideoImportSerializer, VideoSerializer
 from filmscape.models import Video
 from django.conf import settings
@@ -68,6 +69,7 @@ class UpdateFilmListView(APIView):
 class VideosView(ListAPIView):
     queryset = Video.objects.all()
     serializer_class = VideoSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, CaseInsensitiveOrderingFilter]
     filterset_fields = ['disabled', 'isFeatured']
     search_fields = ['name', 'shortName']
+    ordering_fields = ['name']
