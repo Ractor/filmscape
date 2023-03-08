@@ -18,8 +18,8 @@ class Video(models.Model):
     isFeatured = models.BooleanField()
     # drm -> TBA dependent model
     # features -> TBA dependent model
-    # licenseServers -> TBA dependent model
-    # licenseRequestHeaders -> TBA dependent model
+    licenseServers = models.JSONField()
+    licenseRequestHeaders = models.JSONField()
     # requestFilter is always null, skipped
     # responseFilter is always null, skipped
     # clearKeys is always empty object, skipped
@@ -31,7 +31,7 @@ class Video(models.Model):
     # mimeType is always null, skipped
     # mediaPlaylistFullMimeType is always null, skipped
     storedProgress = models.PositiveIntegerField(null=True)
-    # storedContent -> TBA dependent model
+    storedContent = models.JSONField(null=True)
 
     def save(
         self, force_insert=False, force_update=False, using=None, update_fields=None, *args, **kwargs
