@@ -32,17 +32,3 @@ class Video(models.Model):
     # mediaPlaylistFullMimeType is always null, skipped
     storedProgress = models.PositiveIntegerField(null=True)
     storedContent = models.JSONField(null=True)
-
-    def save(
-        self, force_insert=False, force_update=False, using=None, update_fields=None, *args, **kwargs
-    ):
-        """
-        Override function to original save() to update existing values (e.g. with the existing "name" value)
-        """
-        # Try to find existing record.
-        try:
-            video = Video.objects.get(name=self.name)
-            self.id = video.id
-        except Video.DoesNotExist:
-            pass
-        super().save(*args, **kwargs)

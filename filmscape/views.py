@@ -32,22 +32,25 @@ class UpdateFilmListView(APIView):
             logger.debug('Serializing fetched data.')
             serializer = VideoImportSerializer(data=data, many=True)
 
-            # If there is any invalid record, parse records separately
-            # and use a different HTTP status code to address this.
+            # If there is any invalid record use a different HTTP status code to address this.
             if not serializer.is_valid():
-                logger.debug('Serialization was not valid. Processing records one by one.')
-                api_videos = []
+                logger.debug('Serialization was not valid.')
                 status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
-                errors = serializer.errors
-                for i in range(len(data)):
-                    logger.debug(f'Processing record "{data[i].get("name") or "<no_name>"}".')
-                    if errors[i]:
-                        logger.warning(f'Record with name "{data[i].get("name") or "<no_name>"}" threw following error: {str(errors[i])}')
-                        continue
+                api_videos = []
 
-                    video = Video(**serializer.data[i])
-                    video.save()
-                    api_videos.append(video)
+                # Process records one by one (due to sec
+                errors = serializer.errors
+                for d in data:
+                    single_serializer = VideoImportSerializer(data=d)
+                    video_name = d.get("name") or "<no_name>"
+
+                    logger.debug(f'Processing record "{video_name}".')
+                    if not single_serializer.is_valid():
+                        logger.warning(f'Record "{video_name}" threw following error: {str(single_serializer.errors)}')
+                        continue
+                    video_instance = single_serializer.save()
+                    logger.debug(f'Record "{video_name}" processed successfully.')
+                    api_videos.append(video_instance)
             else:
                 logger.debug('Serialization was valid. Saving all records.')
                 api_videos = serializer.save()
