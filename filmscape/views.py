@@ -10,8 +10,9 @@ import requests
 import logging
 
 from filmscape.filters import CaseInsensitiveOrderingFilter
-from filmscape.serializers import VideoImportSerializer, VideoSerializer, ExtraTextImportSerializer
-from filmscape.models import Video, ExtraText
+from filmscape.serializers import VideoImportSerializer, VideoSerializer, ExtraTextImportSerializer, \
+    DrmImportSerializer, FeaturesImportSerializer
+from filmscape.models import Video, ExtraText, Drm, Features
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ class UpdateFilmListView(APIView):
 
             # Processing videos
             api_videos = []
+            api_drm =  []
+            api_features = []
             api_extratext = []
             for d in data:
                 video_name = d.get("name") or "<no_name>"
@@ -49,10 +52,54 @@ class UpdateFilmListView(APIView):
                 video_instance, _ = Video.objects.update_or_create(name=d.get("name"),
                                                                    defaults=serializer.validated_data)
                 logger.debug(f'Record "{video_name}" processed successfully.')
-                api_videos.append(video_instance)
 
                 # Process data for secondary tables
+                # - drm
+                if 'drm' in d:
+                    if type(d['drm']) != list:
+                        status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                        logger.warning(f'Record "{video_name}" drm argument is not list.')
+                        continue
+                    else:
+                        for drm in d['drm']:
+                            drm_data = {'drm': drm, 'video': video_instance.pk}
+                            drm_serializer = DrmImportSerializer(data=drm_data)
+                            if not drm_serializer.is_valid():
+                                status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                                logger.warning(f'Record "{video_name}" threw following error ' +
+                                               f'for drm: {str(drm_serializer.errors)}')
+                                continue
+                            drm_instance, _ = Drm.objects.update_or_create(video=video_instance,
+                                                                           drm=drm,
+                                                                           defaults=drm_serializer.validated_data)
+                            api_drm.append(drm_instance)
+
+                # - features
+                if 'features' in d:
+                    if type(d['features']) != list:
+                        status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                        logger.warning(f'Record "{video_name}" features argument is not list.')
+                        continue
+                    else:
+                        for feature in d['features']:
+                            features_data = {'feature': feature, 'video': video_instance.pk}
+                            features_serializer = FeaturesImportSerializer(data=features_data)
+                            if not features_serializer.is_valid():
+                                status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                                logger.warning(f'Record "{video_name}" threw following error ' +
+                                               f'for features: {str(features_serializer.errors)}')
+                                continue
+                            features_instance, _ = Features.objects.update_or_create(video=video_instance,
+                                                                                     feature=feature,
+                                                                                     defaults=features_serializer.
+                                                                                     validated_data)
+                            api_features.append(features_instance)
+
+                api_videos.append(video_instance)
+
                 # - extraText
+                # (the extraText information is not essential for video playback,
+                # that's why it does not come before listing the video itself)
                 if 'extraText' in d:
                     if type(d['extraText']) != list:
                         status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
@@ -65,7 +112,7 @@ class UpdateFilmListView(APIView):
                                 logger.warning(f'Record "{video_name}" threw following error ' +
                                                f'for extraText: {str(et_serializer.errors)}')
                                 continue
-                            et_instance, _ = ExtraText.objects.update_or_create(video=video_instance.pk,
+                            et_instance, _ = ExtraText.objects.update_or_create(video=video_instance,
                                                                                 uri=et_serializer.validated_data['uri'],
                                                                                 defaults=et_serializer.validated_data)
                             api_extratext.append(et_instance)
@@ -81,6 +128,18 @@ class UpdateFilmListView(APIView):
         for video in obsolete_videos:
             logger.debug(f'Deleting record "{video.name}".')
             video.delete()
+
+        logger.debug('Deleting obsolete drms.')
+        all_drm = list(Drm.objects.all())
+        obsolete_drm = [drm for drm in all_drm if drm not in api_drm]
+        for drm in obsolete_drm:
+            drm.delete()
+
+        logger.debug('Deleting obsolete features.')
+        all_features = list(Features.objects.all())
+        obsolete_features = [features for features in all_features if features not in api_features]
+        for features in obsolete_features:
+            features.delete()
 
         logger.debug('Deleting obsolete extraTexts.')
         all_extratext = list(ExtraText.objects.all())

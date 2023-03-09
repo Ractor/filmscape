@@ -1,4 +1,4 @@
-from filmscape.models import Video, ExtraText
+from filmscape.models import Video, ExtraText, Drm, Features
 from rest_framework import serializers
 
 
@@ -8,6 +8,24 @@ class ExtraTextImportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExtraText
+        fields = '__all__'
+
+
+class DrmImportSerializer(serializers.ModelSerializer):
+    # Ignore the unique together validator as it will be dealt with during saving.
+    def get_unique_together_validators(self): return []
+
+    class Meta:
+        model = Drm
+        fields = '__all__'
+
+
+class FeaturesImportSerializer(serializers.ModelSerializer):
+    # Ignore the unique together validator as it will be dealt with during saving.
+    def get_unique_together_validators(self): return []
+
+    class Meta:
+        model = Features
         fields = '__all__'
 
 
@@ -32,7 +50,10 @@ class ExtraTextSerializer(serializers.ModelSerializer):
 
 class VideoSerializer(serializers.ModelSerializer):
     extraText = ExtraTextSerializer(many=True, read_only=True)
+    drm = serializers.StringRelatedField(many=True)
+    features = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = Video
-        fields = ['name', 'shortName', 'isFeatured', 'disabled', 'iconUri', 'description', 'extraText']
+        fields = ['name', 'shortName', 'isFeatured', 'disabled', 'iconUri',
+                  'description', 'extraText', 'drm', 'features']
