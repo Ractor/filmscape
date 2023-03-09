@@ -32,3 +32,17 @@ class Video(models.Model):
     # mediaPlaylistFullMimeType is always null, skipped
     storedProgress = models.PositiveIntegerField(null=True)
     storedContent = models.JSONField(null=True)
+
+
+class ExtraText(models.Model):
+    """
+    Secondary table for Video model containing subtitles and other secondary text.
+    """
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="extraText")
+    uri = models.URLField()
+    language = models.CharField(max_length=2)
+    kind = models.CharField(max_length=20)
+    mime = models.CharField(max_length=20)
+
+    class Meta:
+        unique_together = ('video', 'uri')

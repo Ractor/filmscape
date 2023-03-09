@@ -3,15 +3,15 @@ from requests import JSONDecodeError
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import SearchFilter
 from rest_framework import status
 from requests.exceptions import ConnectionError
 import requests
 import logging
 
 from filmscape.filters import CaseInsensitiveOrderingFilter
-from filmscape.serializers import VideoImportSerializer, VideoSerializer
-from filmscape.models import Video
+from filmscape.serializers import VideoImportSerializer, VideoSerializer, ExtraTextImportSerializer
+from filmscape.models import Video, ExtraText
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -30,30 +30,46 @@ class UpdateFilmListView(APIView):
             r = requests.get(settings.FILMSCAPE_API_URL)
             data = r.json()
             logger.debug('Serializing fetched data.')
-            serializer = VideoImportSerializer(data=data, many=True)
 
-            # If there is any invalid record use a different HTTP status code to address this.
-            if not serializer.is_valid():
-                logger.debug('Serialization was not valid.')
-                status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
-                api_videos = []
+            # Processing videos
+            api_videos = []
+            api_extratext = []
+            for d in data:
+                video_name = d.get("name") or "<no_name>"
+                logger.debug(f'Processing record "{video_name}".')
+                serializer = VideoImportSerializer(data=d)
 
-                # Process records one by one (due to sec
-                errors = serializer.errors
-                for d in data:
-                    single_serializer = VideoImportSerializer(data=d)
-                    video_name = d.get("name") or "<no_name>"
+                # If there is any invalid record use a different HTTP status code to address this.
+                if not serializer.is_valid():
+                    status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                    logger.warning(f'Record "{video_name}" threw following error: {str(serializer.errors)}')
+                    continue
 
-                    logger.debug(f'Processing record "{video_name}".')
-                    if not single_serializer.is_valid():
-                        logger.warning(f'Record "{video_name}" threw following error: {str(single_serializer.errors)}')
-                        continue
-                    video_instance = single_serializer.save()
-                    logger.debug(f'Record "{video_name}" processed successfully.')
-                    api_videos.append(video_instance)
-            else:
-                logger.debug('Serialization was valid. Saving all records.')
-                api_videos = serializer.save()
+                # Save video itself
+                video_instance, _ = Video.objects.update_or_create(name=d.get("name"),
+                                                                   defaults=serializer.validated_data)
+                logger.debug(f'Record "{video_name}" processed successfully.')
+                api_videos.append(video_instance)
+
+                # Process data for secondary tables
+                # - extraText
+                if 'extraText' in d:
+                    if type(d['extraText']) != list:
+                        status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                        logger.warning(f'Record "{video_name}" extraText argument is not list.')
+                    else:
+                        for et_data in d['extraText']:
+                            et_serializer = ExtraTextImportSerializer(data={**et_data, 'video': video_instance.pk})
+                            if not et_serializer.is_valid():
+                                status_code = status.HTTP_203_NON_AUTHORITATIVE_INFORMATION
+                                logger.warning(f'Record "{video_name}" threw following error ' +
+                                               f'for extraText: {str(et_serializer.errors)}')
+                                continue
+                            et_instance, _ = ExtraText.objects.update_or_create(video=video_instance.pk,
+                                                                                uri=et_serializer.validated_data['uri'],
+                                                                                defaults=et_serializer.validated_data)
+                            api_extratext.append(et_instance)
+
         except (JSONDecodeError, ConnectionError) as err:
             logger.error(f'Error occurred during API data processing: {err}')
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -65,6 +81,12 @@ class UpdateFilmListView(APIView):
         for video in obsolete_videos:
             logger.debug(f'Deleting record "{video.name}".')
             video.delete()
+
+        logger.debug('Deleting obsolete extraTexts.')
+        all_extratext = list(ExtraText.objects.all())
+        obsolete_extratext = [et for et in all_extratext if et not in api_extratext]
+        for extratext in obsolete_extratext:
+            extratext.delete()
 
         return Response(status=status_code)
 
