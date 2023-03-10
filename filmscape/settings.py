@@ -83,8 +83,12 @@ WSGI_APPLICATION = 'filmscape.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('FILMSCAPE_DB_NAME', 'postgres'),
+        'USER': os.getenv('FILMSCAPE_DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('FILMSCAPE_DB_PASSWORD', ''),
+        'HOST': os.getenv('FILMSCAPE_DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('FILMSCAPE_DB_PORT', '5432'),
     }
 }
 
@@ -130,7 +134,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-FILMSCAPE_API_URL = os.getenv('FILMSCAPE_API_URL', '')
+FILMSCAPE_API_URL = os.getenv('FILMSCAPE_API_URL')
 
 LOGGING = {
     'version': 1,

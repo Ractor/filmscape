@@ -1,0 +1,34 @@
+version: '3.4'
+services:
+  filmscape:
+    build:
+      context: .
+      args:
+      - FILMSCAPE_DB_NAME=filmscape
+      - FILMSCAPE_DB_USER=filmscape
+      - FILMSCAPE_DB_PASSWORD=some_password
+      - FILMSCAPE_DB_HOST=db
+      - FILMSCAPE_DB_PORT=5432
+      network: host
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+      - redis
+
+    environment:
+      - FILMSCAPE_API_URL=${API_URL}
+      - FILMSCAPE_LOGGING_LEVEL=${LOGGING_LEVEL}
+      - FILMSCAPE_DB_NAME=filmscape
+      - FILMSCAPE_DB_USER=filmscape
+      - FILMSCAPE_DB_PASSWORD=some_password
+      - FILMSCAPE_DB_HOST=db
+      - FILMSCAPE_DB_PORT=5432
+  db:
+    image: 'postgres'
+    environment:
+      - POSTGRES_USER=filmscape
+      - POSTGRES_PASSWORD=some_password
+      - POSTGRES_DB=filmscape
+  redis:
+    image: 'redis'
