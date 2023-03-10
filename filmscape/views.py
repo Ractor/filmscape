@@ -34,7 +34,7 @@ class UpdateFilmListView(APIView):
 
             # Processing videos
             api_videos = []
-            api_drm =  []
+            api_drm = []
             api_features = []
             api_extratext = []
             for d in data:

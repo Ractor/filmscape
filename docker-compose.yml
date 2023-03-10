@@ -10,6 +10,9 @@ services:
       - FILMSCAPE_DB_HOST=db
       - FILMSCAPE_DB_PORT=5432
       network: host
+    command: sh start.sh
+    volumes:
+      - ./:/usr/src/filmscape/
     ports:
       - 8000:8000
     depends_on:
@@ -24,11 +27,33 @@ services:
       - FILMSCAPE_DB_PASSWORD=some_password
       - FILMSCAPE_DB_HOST=db
       - FILMSCAPE_DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
   db:
     image: 'postgres'
     environment:
       - POSTGRES_USER=filmscape
       - POSTGRES_PASSWORD=some_password
       - POSTGRES_DB=filmscape
+  celery:
+    build: .
+    command: celery -A filmscape worker -l info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+    volumes:
+      - ./:/usr/src/filmscape/
+    depends_on:
+      - redis
+  celery-beat:
+    build: .
+    command: celery -A filmscape beat -l info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+    volumes:
+      - ./:/usr/src/filmscape/
+    depends_on:
+      - redis
   redis:
-    image: 'redis'
+    image: 'redis:alpine'

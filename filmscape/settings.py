@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 import os
 
+from celery.schedules import crontab
+import filmscape.tasks
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -148,4 +151,14 @@ LOGGING = {
         'handlers': ['console'],
         'level': os.getenv('FILMSCAPE_LOGGING_LEVEL', 'WARNING'),
     },
+}
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+
+CELERY_BEAT_SCHEDULE = {
+    'sample_task': {
+        'task': 'filmscape.tasks.sample_task',
+        'schedule': crontab(minute='*/1')
+    }
 }

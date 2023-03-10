@@ -16,5 +16,4 @@ RUN apk add --no-cache postgresql-libs && \
 
 COPY . /app
 
-ENTRYPOINT ["sh"]
-CMD ["start.sh"]
+CMD ["sh", "start.sh"]
