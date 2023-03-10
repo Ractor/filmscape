@@ -9,12 +9,9 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 import os
-
-from celery.schedules import crontab
-import filmscape.tasks
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,14 +24,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-^k0hqkazt+69_co7&gd8tp_&@6*ld9l!)gwc=@-2i6+x-kq_1o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('FILMSCAPE_DEBUG') == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'filmscape.apps.FilmscapeConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,7 +42,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'corsheaders',
-    'filmscape',
 ]
 
 MIDDLEWARE = [
@@ -118,9 +115,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'cs-cz'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Prague'
 
 USE_I18N = True
 
@@ -149,7 +146,7 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': os.getenv('FILMSCAPE_LOGGING_LEVEL', 'WARNING'),
+        'level': os.getenv('FILMSCAPE_LOGGING_LEVEL', 'info').upper(),
     },
 }
 
@@ -157,8 +154,8 @@ CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 
 CELERY_BEAT_SCHEDULE = {
-    'sample_task': {
-        'task': 'filmscape.tasks.sample_task',
-        'schedule': crontab(minute='*/1')
+    'sync_films_from_external_api': {
+        'task': 'filmscape.tasks.sync_films_from_external_api',
+        'schedule': timedelta(minutes=int(os.getenv('FILMSCAPE_SYNC_TIMEOUT', 60))),
     }
 }

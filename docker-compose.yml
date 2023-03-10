@@ -20,8 +20,9 @@ services:
       - redis
 
     environment:
+      - FILMSCAPE_DEBUG=${DEBUG}
       - FILMSCAPE_API_URL=${API_URL}
-      - FILMSCAPE_LOGGING_LEVEL=${LOGGING_LEVEL}
+      - FILMSCAPE_LOGGING_LEVEL=${LOGGING_LEVEL:-info}
       - FILMSCAPE_DB_NAME=filmscape
       - FILMSCAPE_DB_USER=filmscape
       - FILMSCAPE_DB_PASSWORD=some_password
@@ -37,23 +38,37 @@ services:
       - POSTGRES_DB=filmscape
   celery:
     build: .
-    command: celery -A filmscape worker -l info
+    command: celery -A filmscape worker -l ${LOGGING_LEVEL:-info}
     environment:
+      - FILMSCAPE_DEBUG=${DEBUG}
+      - FILMSCAPE_API_URL=${API_URL}
+      - FILMSCAPE_LOGGING_LEVEL=${LOGGING_LEVEL}
+      - FILMSCAPE_DB_NAME=filmscape
+      - FILMSCAPE_DB_USER=filmscape
+      - FILMSCAPE_DB_PASSWORD=some_password
+      - FILMSCAPE_DB_HOST=db
+      - FILMSCAPE_DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
     volumes:
       - ./:/usr/src/filmscape/
     depends_on:
+      - db
       - redis
+      - filmscape
   celery-beat:
     build: .
-    command: celery -A filmscape beat -l info
+    command: celery -A filmscape beat -l ${LOGGING_LEVEL:-info}
     environment:
+      - FILMSCAPE_DEBUG=${DEBUG}
+      - FILMSCAPE_SYNC_TIMEOUT=${SYNC_TIMEOUT:-60}
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
     volumes:
       - ./:/usr/src/filmscape/
     depends_on:
+      - db
       - redis
+      - filmscape
   redis:
     image: 'redis:alpine'
